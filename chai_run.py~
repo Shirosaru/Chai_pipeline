@@ -1,0 +1,96 @@
+import os
+import subprocess
+from pathlib import Path
+import tempfile
+import shutil
+
+
+def process_fasta_files(input_dir):
+    # Ensure input_dir is a Path object
+    input_dir = Path(input_dir)
+
+    # Step 1: Find the fasta file and a3m files in the input directory
+    fasta_file = None
+    a3m_files = []
+
+    for file in input_dir.iterdir():
+        if file.suffix == ".fasta":
+            fasta_file = file
+        elif file.suffix == ".a3m":
+            a3m_files.append(file)
+
+    if not fasta_file:
+        raise FileNotFoundError("No .fasta file found in the input directory.")
+    
+    if not a3m_files:
+        raise FileNotFoundError("No .a3m files found in the input directory.")
+
+    # Step 2: Run chai-lab a3m-to-pqt for each .a3m file
+    #for a3m_file in a3m_files:
+    try:
+            print(f"Processing {a3m_files}...")
+            subprocess.run(["chai-lab", "a3m-to-pqt", "."], check=True)
+    except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Error processing {a3m_file}: {str(e)}")
+
+    # Step 3: Write the updated fasta file to the predict_with_msas.py script
+    tmp_dir = Path(tempfile.mkdtemp())
+    
+    try:
+        # Prepare the example FASTA content
+        example_fasta = fasta_file.read_text()
+        predict_file_path = tmp_dir / "predict_with_msas.py"
+        
+        # Escape triple quotes and insert them correctly in the string
+        predict_script = f"""
+import tempfile
+from pathlib import Path
+import numpy as np
+
+from chai_lab.chai1 import run_inference
+
+tmp_dir = Path(tempfile.mkdtemp())
+
+# Prepare input fasta
+example_fasta = '''{example_fasta}'''
+
+fasta_path = tmp_dir / "example.fasta"
+fasta_path.write_text(example_fasta)
+
+# Generate structure
+output_dir = tmp_dir / "outputs"
+candidates = run_inference(
+    fasta_file=fasta_path,
+    output_dir=output_dir,
+    num_trunk_recycles=3,
+    num_diffn_timesteps=200,
+    seed=42,
+    device="cuda:0",
+    use_esm_embeddings=True,
+    msa_directory=Path(__file__).parent,
+    use_msa_server=False,
+)
+cif_paths = candidates.cif_paths
+scores = [rd.aggregate_score for rd in candidates.ranking_data]
+
+# Load pTM, ipTM, pLDDTs and clash scores for sample 2
+scores = np.load(output_dir.joinpath("scores.model_idx_2.npz"))
+\"\"\"  # <-- Fixed closing triple quotes
+"""
+        predict_file_path.write_text(predict_script)
+        
+        # Step 4: Run the predict_with_msas.py
+        output_dir = fasta_file.parent
+        subprocess.run(["conda", "activate", "chai"], shell=True)  # Activate chai environment
+        subprocess.run(["python3.10", str(predict_file_path)], check=True)  # Run the script
+        print(f"Prediction completed. Output saved in: {output_dir}")
+
+    finally:
+        # Ensure temporary directory is cleaned up
+        shutil.rmtree(tmp_dir)
+
+
+if __name__ == "__main__":
+    input_dir = Path(".")  # Replace this with your input directory
+    process_fasta_files(input_dir)
+
