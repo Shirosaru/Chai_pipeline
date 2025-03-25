@@ -52,7 +52,7 @@ def copy_files(src_dir, dest_dir, file_extension):
                 shutil.copy(src_file, dest_dir)
                 print(f"Copied {src_file} to {dest_dir}")
 
-def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database="uniref90", iterations=3, final_output_dir="final_output"):
+def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database="uniref90", iterations=3):
     """
     Process each FASTA file in the given directory by running the A3M_TGT_Gen.sh script.
     
@@ -69,9 +69,6 @@ def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database
         print(f"Error: The directory {input_fasta_dir} does not exist.")
         return
     
-    # Ensure the final output directory exists
-    os.makedirs(final_output_dir, exist_ok=True)
-
     # Process each FASTA file in the input directory
     for fasta_file in os.listdir(input_fasta_dir):
         if fasta_file.endswith(".fasta"):  # Only process .fasta files
@@ -79,6 +76,12 @@ def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database
 
             # Extract the base name of the FASTA file (without extension)
             base_name = os.path.splitext(fasta_file)[0]
+
+            # Create the final output directory as the basename + '_final_output'
+            final_output_dir = os.path.join(input_fasta_dir, f"{base_name}_final_output")
+            
+            # Ensure the final output directory exists
+            os.makedirs(final_output_dir, exist_ok=True)
 
             # Create the output directory based on the FASTA file name
             output_dir = os.path.join(input_fasta_dir, f"{sanitize_name(base_name)}_out")
@@ -249,9 +252,11 @@ scores = np.load(output_dir.joinpath("scores.model_idx_2.npz"))
 
 if __name__ == "__main__":
     # Example usage:
-    final_output_dir="./TGT_output"
-    process_fasta_files(input_fasta_dir=".", final_output_dir=final_output_dir)
-    
+    #final_output_dir="./TGT_output"
+    #process_fasta_files(input_fasta_dir=".", final_output_dir=final_output_dir)
+    process_fasta_files(input_fasta_dir=".")
+
+
     #input_dir = Path(".")  # Replace this with your input directory
     input_dir = final_output_dir  # Replace this with your input directory
     process_fasta_files(input_dir)
