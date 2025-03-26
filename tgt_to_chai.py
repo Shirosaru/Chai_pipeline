@@ -52,7 +52,7 @@ def copy_files(src_dir, dest_dir, file_extension):
                 shutil.copy(src_file, dest_dir)
                 print(f"Copied {src_file} to {dest_dir}")
 
-def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database="uniref90", iterations=3):
+def process_fasta_files1(input_fasta_dir, cpu_num=12, package="jackhmm", database="uniref90", iterations=3):
     """
     Process each FASTA file in the given directory by running the A3M_TGT_Gen.sh script.
     
@@ -63,7 +63,8 @@ def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database
     :param iterations: The number of iterations to run (default: 3)
     :param final_output_dir: Directory where the copied .a3m files and input .fasta files will be stored
     """
-    
+
+    directory_list=[]
     # Ensure the input directory exists
     if not os.path.isdir(input_fasta_dir):
         print(f"Error: The directory {input_fasta_dir} does not exist.")
@@ -122,10 +123,12 @@ def process_fasta_files(input_fasta_dir, cpu_num=12, package="jackhmm", database
             # After processing, copy .a3m files and the original .fasta file to the final output directory
             copy_files(output_dir, final_output_dir, ".a3m")
             shutil.copy(fasta_path, final_output_dir)  # Copy the original .fasta file to the final output directory
+            directory_list.append(final_output_dir)
+    return directory_list
 
 
 
-def process_fasta_files(input_dir):
+def process_fasta_files2(input_dir):
     # Ensure input_dir is a Path object
     input_dir = Path(input_dir)
 
@@ -254,9 +257,10 @@ if __name__ == "__main__":
     # Example usage:
     #final_output_dir="./TGT_output"
     #process_fasta_files(input_fasta_dir=".", final_output_dir=final_output_dir)
-    process_fasta_files(input_fasta_dir=".")
+    directorylist=process_fasta_files1(input_fasta_dir=".")
 
 
     #input_dir = Path(".")  # Replace this with your input directory
-    input_dir = final_output_dir  # Replace this with your input directory
-    process_fasta_files(input_dir)
+    #input_dir = final_output_dir  # Replace this with your input directory
+    for dir in directorylist:
+        process_fasta_files2(dir)
